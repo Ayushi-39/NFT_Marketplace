@@ -42,6 +42,13 @@ contract Project {
         uint256 price
     );
 
+    // Event to be emitted when a listing is canceled
+    event TokenListingCancelled(uint256 indexed tokenId);
+
+    // Event to be emitted when a token's price is updated
+    event TokenPriceUpdated(uint256 indexed tokenId, uint256 newPrice);
+
+
     /**
      * @dev Sets the address of the NFT contract.
      * @param _nftContractAddress The address of the NFT contract.
@@ -82,10 +89,41 @@ contract Project {
         listedToken.currentlyListed = false;
 
         IERC721 nftContract = IERC721(nftContractAddress);
+        // The marketplace contract itself needs to be approved to transfer the token
         nftContract.safeTransferFrom(listedToken.seller, msg.sender, tokenId);
 
         listedToken.seller.transfer(msg.value);
 
         emit TokenSold(tokenId, listedToken.seller, msg.sender, msg.value);
+    }
+
+    /**
+     * @dev Allows a seller to cancel their token listing.
+     * @param tokenId The ID of the token to be delisted.
+     */
+    function cancelListing(uint256 tokenId) public {
+        ListedToken storage listedToken = listedTokens[tokenId];
+        require(listedToken.currentlyListed, "Token is not listed for sale.");
+        require(listedToken.seller == msg.sender, "You are not the seller of this token.");
+
+        listedToken.currentlyListed = false;
+
+        emit TokenListingCancelled(tokenId);
+    }
+
+    /**
+     * @dev Allows a seller to update the price of their listed token.
+     * @param tokenId The ID of the token to update.
+     * @param newPrice The new price for the token in wei.
+     */
+    function updateListingPrice(uint256 tokenId, uint256 newPrice) public {
+        ListedToken storage listedToken = listedTokens[tokenId];
+        require(listedToken.currentlyListed, "Token is not listed for sale.");
+        require(listedToken.seller == msg.sender, "You are not the seller of this token.");
+        require(newPrice > 0, "Price must be greater than zero.");
+
+        listedToken.price = newPrice;
+
+        emit TokenPriceUpdated(tokenId, newPrice);
     }
 }
