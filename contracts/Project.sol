@@ -48,7 +48,6 @@ contract Project {
     // Event to be emitted when a token's price is updated
     event TokenPriceUpdated(uint256 indexed tokenId, uint256 newPrice);
 
-
     /**
      * @dev Sets the address of the NFT contract.
      * @param _nftContractAddress The address of the NFT contract.
@@ -75,6 +74,8 @@ contract Project {
         });
 
         emit TokenListed(tokenId, msg.sender, price);
+
+        _tokenIds.increment(); // Track how many tokens have been listed
     }
 
     /**
@@ -89,7 +90,6 @@ contract Project {
         listedToken.currentlyListed = false;
 
         IERC721 nftContract = IERC721(nftContractAddress);
-        // The marketplace contract itself needs to be approved to transfer the token
         nftContract.safeTransferFrom(listedToken.seller, msg.sender, tokenId);
 
         listedToken.seller.transfer(msg.value);
@@ -126,4 +126,34 @@ contract Project {
 
         emit TokenPriceUpdated(tokenId, newPrice);
     }
+
+    /**
+     * @dev Returns an array of all currently listed tokens.
+     */
+    function getListedTokens() public view returns (ListedToken[] memory) {
+        uint256 totalItemCount = _tokenIds.current();
+        uint256 listedItemCount = 0;
+        uint256 currentIndex = 0;
+
+        // Count how many tokens are currently listed
+        for (uint256 i = 1; i <= totalItemCount; i++) {
+            if (listedTokens[i].currentlyListed) {
+                listedItemCount += 1;
+            }
+        }
+
+        // Create an array to hold the listed tokens
+        ListedToken[] memory items = new ListedToken[](listedItemCount);
+
+        // Populate the array
+        for (uint256 i = 1; i <= totalItemCount; i++) {
+            if (listedTokens[i].currentlyListed) {
+                items[currentIndex] = listedTokens[i];
+                currentIndex += 1;
+            }
+        }
+
+        return items;
+    }
 }
+
